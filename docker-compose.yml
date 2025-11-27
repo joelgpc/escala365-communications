@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   postgres:
@@ -8,7 +8,6 @@ services:
       POSTGRES_USER: escala365
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: escala365_db
-      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -24,7 +23,6 @@ services:
     container_name: escala365-redis
     networks:
       - escala365-net
-    command: redis-server --appendonly yes
 
   asterisk:
     build:
@@ -32,20 +30,14 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-asterisk
     environment:
-      AMI_ENABLED: "yes"
-      AMI_PORT: "5038"
-      AMI_USER: admin
       AMI_PASSWORD: ${AMI_PASSWORD}
     volumes:
       - asterisk_data:/var/lib/asterisk
       - ./asterisk/sip.conf:/etc/asterisk/sip.conf
       - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf
-      - ./asterisk/http.conf:/etc/asterisk/http.conf
-      - asterisk_recordings:/var/spool/asterisk/monitor
     ports:
       - "5060:5060/udp"
       - "5038:5038"
-      - "8088:8088"
     networks:
       - escala365-net
 
@@ -64,16 +56,11 @@ services:
       ASTERISK_PASSWORD: ${AMI_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3000
-      CORS_ORIGIN: "*"
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
-      asterisk:
-        condition: service_started
     networks:
       - escala365-net
     restart: unless-stopped
@@ -85,36 +72,31 @@ services:
     container_name: escala365-frontend
     environment:
       REACT_APP_API_URL: http://localhost:3000
-      REACT_APP_WS_URL: ws://localhost:3000
     ports:
       - "3001:3000"
     depends_on:
       - backend
     networks:
       - escala365-net
-    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
     container_name: escala365-nginx
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
       - frontend
     networks:
       - escala365-net
-    restart: unless-stopped
 
 volumes:
   postgres_data:
   asterisk_data:
-  asterisk_recordings:
 
 networks:
   escala365-net:
     driver: bridge
+
