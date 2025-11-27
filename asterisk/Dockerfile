@@ -1,10 +1,16 @@
 FROM ubuntu:22.04
 
+# Evitar prompts interactivos
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=linux
+
+# Instalar Asterisk sin prompts
 RUN apt-get update && apt-get install -y \
     asterisk asterisk-modules asterisk-core-sounds-en \
     asterisk-moh-opsound-gsm curl wget git \
     python3 python3-pip ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 RUN pip3 install openai-whisper --no-cache-dir
 
