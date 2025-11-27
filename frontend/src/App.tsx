@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         // Conectar al backend
-        const socket = io(process.env.REACT_APP_WS_URL || 'http://localhost:3000');
+        const socket = io(import.meta.env.REACT_APP_WS_URL || 'http://localhost:3000');
 
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
@@ -50,7 +50,7 @@ const App: React.FC = () => {
     const checkHealth = async () => {
         try {
             await axios.get(
-                `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/health`
+                `${import.meta.env.REACT_APP_API_URL || 'http://localhost:3000'}/health`
             );
             setAsteriskStatus('✅ Online');
         } catch (error) {
@@ -62,7 +62,7 @@ const App: React.FC = () => {
         setLoading(true);
         try {
             const response = await axios.get(
-                `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/recordings`
+                `${import.meta.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/recordings`
             );
             setRecordings(response.data);
         } catch (error) {
@@ -73,7 +73,7 @@ const App: React.FC = () => {
     };
 
     const downloadRecording = (id: string) => {
-        const url = `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/recordings/${id}/download`;
+        const url = `${import.meta.env.REACT_APP_API_URL || 'http://localhost:3000'}/api/recordings/${id}/download`;
         window.open(url, '_blank');
     };
 
