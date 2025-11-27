@@ -49,7 +49,7 @@ const App: React.FC = () => {
 
     const checkHealth = async () => {
         try {
-            const response = await axios.get(
+            await axios.get(
                 `${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/health`
             );
             setAsteriskStatus('✅ Online');
