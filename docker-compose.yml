@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   postgres:
@@ -33,11 +33,10 @@ services:
       AMI_PASSWORD: ${AMI_PASSWORD}
     volumes:
       - asterisk_data:/var/lib/asterisk
-      - ./asterisk/sip.conf:/etc/asterisk/sip.conf
-      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf
     ports:
       - "5060:5060/udp"
       - "5038:5038"
+      - "8088:8088"
     networks:
       - escala365-net
 
@@ -99,4 +98,3 @@ volumes:
 networks:
   escala365-net:
     driver: bridge
-
