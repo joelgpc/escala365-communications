@@ -23,9 +23,9 @@ router.get('/recordings', (req, res) => {
         }
 
         const files = fs.readdirSync(recordingsDir)
-            .filter(f => f.endsWith('.wav'))
+            .filter(f => f.endsWith('.mp3'))
             .map(f => ({
-                id: f.replace('.wav', ''),
+                id: f.replace('.mp3', ''),
                 file: f,
                 size: fs.statSync(path.join(recordingsDir, f)).size,
                 created: fs.statSync(path.join(recordingsDir, f)).birthtimeMs
@@ -42,7 +42,7 @@ router.get('/recordings', (req, res) => {
 // GET download recording
 router.get('/recordings/:id/download', (req, res) => {
     const { id } = req.params;
-    const filePath = `/var/spool/asterisk/monitor/${id}.wav`;
+    const filePath = `/var/spool/asterisk/monitor/${id}.mp3`;
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: 'Recording not found' });
