@@ -6,7 +6,7 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-escala365password}
+      POSTGRES_PASSWORD: escala365secure123
       POSTGRES_DB: escala365
       POSTGRES_INITDB_ARGS: "-c max_connections=200"
     volumes:
