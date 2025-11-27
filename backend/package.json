@@ -14,9 +14,7 @@
     "dotenv": "^16.3.1",
     "pg": "^8.10.0",
     "redis": "^4.6.7",
-    "socket.io": "^4.6.1",
-    "node-asterisk": "^0.0.7",
-    "asterisk-manager": "^0.1.16"
+    "socket.io": "^4.6.1"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
