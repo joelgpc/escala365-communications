@@ -6,15 +6,17 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      # CONTRASEÑA ESCRITA DIRECTAMENTE
+      # CONTRASEÑA ESCRITA DIRECTAMENTE (NO CAMBIAR)
       POSTGRES_PASSWORD: P0stgr3s_Sup3r_S3cur3_Key_2025!
       POSTGRES_DB: escala365_db
       POSTGRES_INITDB_ARGS: "-c max_connections=200"
     volumes:
-      - postgres_data_fix:/var/lib/postgresql/data
+      # CAMBIADO A v2 PARA FORZAR DISCO NUEVO
+      - postgres_data_v2:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
+      # Healthcheck corregido y simplificado
       test: ["CMD-SHELL", "pg_isready -U escala365 -d escala365_db"]
       interval: 10s
       timeout: 5s
@@ -53,7 +55,7 @@ services:
     container_name: escala365-backend
     environment:
       NODE_ENV: production
-      # URL CON CONTRASEÑA INCRUSTADA
+      # URL CON CONTRASEÑA INCRUSTADA (IMPORTANTE)
       DATABASE_URL: postgresql://escala365:P0stgr3s_Sup3r_S3cur3_Key_2025!@postgres:5432/escala365_db
       REDIS_URL: redis://redis:6379
       ASTERISK_HOST: asterisk
@@ -101,7 +103,8 @@ services:
       - escala365-net
 
 volumes:
-  postgres_data_fix:
+  # NUEVO VOLUMEN
+  postgres_data_v2:
   asterisk_data:
 
 networks:
