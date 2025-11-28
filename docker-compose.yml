@@ -6,22 +6,20 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # CONTRASEÑA ESCRITA DIRECTAMENTE
+      POSTGRES_PASSWORD: P0stgr3s_Sup3r_S3cur3_Key_2025!
       POSTGRES_DB: escala365_db
       POSTGRES_INITDB_ARGS: "-c max_connections=200"
     volumes:
-      # CAMBIO IMPORTANTE: Cambiamos el nombre para forzar uno nuevo y limpio
       - postgres_data_fix:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      # CAMBIO: Quitamos el "-d escala365_db" para probar solo conexión básica primero
-      test: ["CMD-SHELL", "pg_isready -U escala365"]
+      test: ["CMD-SHELL", "pg_isready -U escala365 -d escala365_db"]
       interval: 10s
       timeout: 5s
       retries: 5
-      # CAMBIO: Damos más tiempo de arranque
-      start_period: 60s
+      start_period: 30s
     networks:
       - escala365-net
 
@@ -37,7 +35,8 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-asterisk
     environment:
-      AMI_PASSWORD: ${AMI_PASSWORD}
+      # CONTRASEÑA ESCRITA DIRECTAMENTE
+      AMI_PASSWORD: Ast3r1sk_Am1_S3cr3t_Conn!
     volumes:
       - asterisk_data:/var/lib/asterisk
     ports:
@@ -54,13 +53,16 @@ services:
     container_name: escala365-backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://escala365:${DB_PASSWORD}@postgres:5432/escala365_db
+      # URL CON CONTRASEÑA INCRUSTADA
+      DATABASE_URL: postgresql://escala365:P0stgr3s_Sup3r_S3cur3_Key_2025!@postgres:5432/escala365_db
       REDIS_URL: redis://redis:6379
       ASTERISK_HOST: asterisk
       ASTERISK_PORT: 5038
       ASTERISK_USER: admin
-      ASTERISK_PASSWORD: ${AMI_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
+      # CONTRASEÑA ESCRITA DIRECTAMENTE
+      ASTERISK_PASSWORD: Ast3r1sk_Am1_S3cr3t_Conn!
+      # SECRETO ESCRITO DIRECTAMENTE
+      JWT_SECRET: jwt_5up3r_l0ng_r@nd0m_s3cr3t_k3y_f0r_t0k3ns
       PORT: 3000
     ports:
       - "3000:3000"
@@ -99,7 +101,6 @@ services:
       - escala365-net
 
 volumes:
-  # CAMBIO: Definimos el nuevo volumen
   postgres_data_fix:
   asterisk_data:
 
