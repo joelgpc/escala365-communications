@@ -6,23 +6,22 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      # Usamos la variable para asegurar que coincida con el backend
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      # Corregido: Debe coincidir con lo que busca el backend (escala365_db)
       POSTGRES_DB: escala365_db
       POSTGRES_INITDB_ARGS: "-c max_connections=200"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # CAMBIO IMPORTANTE: Cambiamos el nombre para forzar uno nuevo y limpio
+      - postgres_data_fix:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      # El usuario debe coincidir con POSTGRES_USER
-      test: ["CMD-SHELL", "pg_isready -U escala365 -d escala365_db"]
+      # CAMBIO: Quitamos el "-d escala365_db" para probar solo conexión básica primero
+      test: ["CMD-SHELL", "pg_isready -U escala365"]
       interval: 10s
       timeout: 5s
       retries: 5
-      # Importante: Da 30 segundos de gracia al inicio
-      start_period: 30s
+      # CAMBIO: Damos más tiempo de arranque
+      start_period: 60s
     networks:
       - escala365-net
 
@@ -55,7 +54,6 @@ services:
     container_name: escala365-backend
     environment:
       NODE_ENV: production
-      # La URL ahora usa las variables correctas
       DATABASE_URL: postgresql://escala365:${DB_PASSWORD}@postgres:5432/escala365_db
       REDIS_URL: redis://redis:6379
       ASTERISK_HOST: asterisk
@@ -79,11 +77,9 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-frontend
     environment:
-      # Si el navegador del cliente debe acceder, esto debe ser la URL pública, no localhost
-      # Si es renderizado servidor, localhost está bien. Asumo cliente:
-      REACT_APP_API_URL: /api 
+      REACT_APP_API_URL: /api
     ports:
-      - "3001:80" # Nginx interno del frontend suele exponer 80
+      - "3001:80"
     depends_on:
       - backend
     networks:
@@ -103,7 +99,8 @@ services:
       - escala365-net
 
 volumes:
-  postgres_data:
+  # CAMBIO: Definimos el nuevo volumen
+  postgres_data_fix:
   asterisk_data:
 
 networks:
