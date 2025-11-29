@@ -6,18 +6,16 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      POSTGRES_PASSWORD: escala365secure123
-      POSTGRES_DB: escala365
-      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+      POSTGRES_PASSWORD: "P0stgr3s_Sup3r_S3cur3_Key_2025!"
+      POSTGRES_DB: escala365_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - postgres_data_v4:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U escala365"]
+      test: ["CMD-SHELL", "pg_isready -U escala365 -d escala365_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - escala365-net
 
@@ -33,7 +31,7 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-asterisk
     environment:
-      AMI_PASSWORD: ${AMI_PASSWORD}
+      AMI_PASSWORD: "Ast3r1sk_Am1_S3cr3t_Conn!"
     volumes:
       - asterisk_data:/var/lib/asterisk
     ports:
@@ -50,16 +48,14 @@ services:
     container_name: escala365-backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://escala365:${DB_PASSWORD}@postgres:5432/escala365_db
-      REDIS_URL: redis://redis:6379
-      ASTERISK_HOST: asterisk
+      DATABASE_URL: postgresql://escala365:P0stgr3s_Sup3r_S3cur3_Key_2025!@postgres:5432/escala365_db
+      REDIS_URL: redis://escala365-redis:6379
+      ASTERISK_HOST: escala365-asterisk
       ASTERISK_PORT: 5038
       ASTERISK_USER: admin
-      ASTERISK_PASSWORD: ${AMI_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
+      ASTERISK_PASSWORD: "Ast3r1sk_Am1_S3cr3t_Conn!"
+      JWT_SECRET: "jwt_5up3r_l0ng_r@nd0m_s3cr3t_k3y_f0r_t0k3ns"
       PORT: 3000
-    ports:
-      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,21 +69,19 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:3000
-    ports:
-      - "3001:3000"
+      # Ahora la API es relativa porque Nginx (el gateway) lo gestiona
+      REACT_APP_API_URL: /api
     depends_on:
       - backend
     networks:
       - escala365-net
 
+  # --- CAMBIO CLAVE AQUÍ ---
   nginx:
-    image: nginx:alpine
-    container_name: escala365-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: escala365-gateway
     depends_on:
       - backend
       - frontend
@@ -95,7 +89,7 @@ services:
       - escala365-net
 
 volumes:
-  postgres_data:
+  postgres_data_v4:
   asterisk_data:
 
 networks:
