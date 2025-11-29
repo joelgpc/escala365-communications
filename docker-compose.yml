@@ -6,7 +6,7 @@ services:
     container_name: postgres
     environment:
       POSTGRES_USER: escala365
-      POSTGRES_PASSWORD: "P0stgr3s_Sup3r_S3cur3_Key_2025!"
+      POSTGRES_PASSWORD: 'P0stgr3s_Sup3r_S3cur3_Key_2025!'
       POSTGRES_DB: escala365_db
     volumes:
       - postgres_data_v4:/var/lib/postgresql/data
@@ -31,7 +31,7 @@ services:
       dockerfile: Dockerfile
     container_name: escala365-asterisk
     environment:
-      AMI_PASSWORD: "Ast3r1sk_Am1_S3cr3t_Conn!"
+      AMI_PASSWORD: 'Ast3r1sk_Am1_S3cr3t_Conn!'
     volumes:
       - asterisk_data:/var/lib/asterisk
     ports:
@@ -53,8 +53,8 @@ services:
       ASTERISK_HOST: escala365-asterisk
       ASTERISK_PORT: 5038
       ASTERISK_USER: admin
-      ASTERISK_PASSWORD: "Ast3r1sk_Am1_S3cr3t_Conn!"
-      JWT_SECRET: "jwt_5up3r_l0ng_r@nd0m_s3cr3t_k3y_f0r_t0k3ns"
+      ASTERISK_PASSWORD: 'Ast3r1sk_Am1_S3cr3t_Conn!'
+      JWT_SECRET: 'jwt_5up3r_l0ng_r@nd0m_s3cr3t_k3y_f0r_t0k3ns'
       PORT: 3000
     depends_on:
       postgres:
