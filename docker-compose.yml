@@ -76,18 +76,6 @@ services:
     networks:
       - escala365-net
 
-  # --- CAMBIO CLAVE AQUÍ ---
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: escala365-gateway
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - escala365-net
-
 volumes:
   postgres_data_v4:
   asterisk_data:
