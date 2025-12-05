@@ -1,8 +1,7 @@
 FROM php:8.1-apache
 
 # 1. Instalar dependencias del sistema (Build Time)
-# Nota: libimap-dev se llama libc-client-dev en Debian
-# Nota: libkerberos-dev se llama libkrb5-dev en Debian
+# Simplificado: sin IMAP para evitar problemas de paquetes en Trixie
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -11,8 +10,6 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
-    libc-client-dev \
-    libkrb5-dev \
     libssl-dev \
     zlib1g-dev \
     libicu-dev \
@@ -21,9 +18,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Instalar extensiones PHP (Build Time)
+# Nota: IMAP removido temporalmente por compatibilidad con Trixie
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
-    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd imap bcmath soap intl
+    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd bcmath intl
 
 # 3. Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
