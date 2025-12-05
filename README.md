@@ -1,134 +1,88 @@
-# Escala365 Call Center
+# Escala365 VoIP Integration
 
-Sistema de call center impulsado por Asterisk, SuiteCRM y AsterLink, optimizado para despliegue en Oracle Cloud ARM via Coolify.
+Sistema de integración VoIP entre SuiteCRM y Asterisk, optimizado para Oracle Cloud ARM via Coolify.
 
 ## 🎯 Características
 
-- **Asterisk PBX**: Central telefónica open source con soporte TLS/SRTP
+- **Pop-up Automático**: Notificación en CRM cuando llega una llamada
+- **Click-to-Call**: Llamar desde el CRM con un click
 - **SuiteCRM**: CRM open source con integración telefónica
-- **AsterLink**: Conector en tiempo real entre Asterisk y CRM
-- **Cumplimiento RGPD**: Grabaciones con aviso legal, Lista Robinson, retención automatizada
-- **Arquitectura ARM64**: Optimizado para Oracle Cloud Always Free tier
-
-## 📋 Requisitos
-
-- **Oracle Cloud**: Instancia VM.Standard.A1.Flex (4 OCPU, 24GB RAM)
-- **Coolify**: Instalado y configurado
-- **Dominio**: Con DNS apuntando a la IP pública
-- **Let's Encrypt**: Certificados SSL automáticos
+- **Asterisk PBX**: Central telefónica profesional
+- **AsterLink**: Conector en tiempo real vía WebSocket
+- **ARM64 Optimizado**: Para Oracle Cloud Always Free
 
 ## 🚀 Despliegue Rápido
 
-### 1. Clonar Repositorio
+Ver [Guía de Inicio Rápido](docs/QUICK_START.md) para instrucciones paso a paso.
 
-```bash
-git clone https://github.com/tuusuario/escala365-communications.git
-cd escala365-communications
-```
+### Resumen de 3 Pasos:
 
-### 2. Configurar Variables de Entorno
+1. **Deploy en Coolify**
 
-```bash
-cp .env.example .env
-nano .env
-```
+   - Copiar `docker-compose.yml`
+   - Configurar variables de entorno
+   - Asignar dominios
 
-Actualiza todas las contraseñas y la IP pública de Oracle Cloud.
+2. **Configurar SuiteCRM**
 
-### 3. Configurar Oracle Cloud Security List
+   - Instalar módulo AsterLink
+   - Generar API keys
+   - Configurar extensión de usuario
 
-Abre los siguientes puertos en la VCN:
+3. **Probar**
+   - Registrar softphone (ext. 100)
+   - Hacer llamada de prueba
+   - Ver pop-up en CRM
 
-- `5060 TCP/UDP`: SIP
-- `5061 TCP`: SIP over TLS
-- `10000-20000 UDP`: RTP (audio)
-- `80/443 TCP`: HTTPS
-
-### 4. Desplegar en Coolify
-
-1. Crear nuevo proyecto en Coolify
-2. Seleccionar "Docker Compose"
-3. Pegar contenido de `docker-compose.yml`
-4. Añadir variables de entorno desde `.env`
-5. Configurar dominios:
-   - SuiteCRM: `crm.tudominio.com` → Port 8080
-   - AsterLink: `ws.tudominio.com` → Port 8010
-6. Deploy
-
-### 5. Configurar Softphones
-
-Configurar Zoiper o Linphone para los agentes:
-
-- **Servidor**: `IP_PUBLICA:5061`
-- **Usuario**: `agent001` (etc.)
-- **Contraseña**: Desde `.env`
-- **Transporte**: TLS
-- **SRTP**: Mandatory
-
-## 📁 Estructura del Proyecto
+## 📁 Estructura
 
 ```
 ├── asterisk/
-│   ├── config/           # Configuración PBX
-│   ├── sounds/es/custom/ # Audios personalizados
-│   └── scripts/          # Scripts de cumplimiento
-├── asterlink/            # Conector Asterisk-CRM
-├── suitecrm/             # Configuraciones CRM
-├── docs/                 # Documentación adicional
-└── docker-compose.yml    # Orquestación de servicios
+│   └── config/
+│       ├── manager.conf    # AMI para AsterLink
+│       ├── pjsip.conf      # Extensiones SIP
+│       └── extensions.conf # Dialplan básico
+├── asterlink/
+│   └── asterlink.yml       # Config WebSocket
+├── docs/
+│   ├──QUICK_START.md      # Guía de despliegue
+│   └── configuracion.md    # Config avanzada
+├── .env.example            # Variables de entorno
+└── docker-compose.yml      # Stack completo
 ```
 
-## 🔐 Cumplimiento Normativo
+## 🔐 Seguridad
 
-### LSSICE - Aviso de Grabación
+**IMPORTANTE**: Antes de desplegar en producción:
 
-- Reproducción automática antes de iniciar grabación
-- Opción DTMF 9 para detener grabación (derecho de oposición)
+- [ ] Cambiar todas las contraseñas en `.env`
+- [ ] Configurar firewall (solo puertos necesarios)
+- [ ] Activar HTTPS en Coolify (Let's Encrypt)
+- [ ] Configurar restricciones de IP para AMI
 
-### Lista Robinson
+## 📊 Requisitos de Sistema
 
-- Verificación automática en llamadas salientes
-- Base de datos local sincronizable
+- **Oracle Cloud**: VM.Standard.A1.Flex (2 OCPU, 12GB RAM mínimo)
+- **Puertos**: 5060 UDP, 8010 TCP, 8080 TCP
+- **Dominio**: Con DNS configurado
+- **Coolify**: v 4.x o superior
 
-### RGPD - Retención de Datos
+## 🛠️ Próximos Pasos
 
-- Grabaciones eliminadas automáticamente después de 90 días
-- Logs de auditoría de todas las eliminaciones
+Después de tener funcionando el pop-up:
 
-## 📊 Monitorización
+1. **Colas de Llamadas**: Configurar queues para soporte/ventas
+2. **Más Extensiones**: Añadir agentes adicionales
+3. **IVR**: Sistema de menú interactivo
+4. **Grabación**: Grabar llamadas con avisos legales
+5. **Reportes**: Estadísticas de llamadas en CRM
 
-Instalar Prometheus + Grafana para monitorizar:
-
-- CPU/RAM de la instancia
-- Llamadas concurrentes
-- Latencia RTP
-- Tiempos de espera en colas
-
-## 🔧 Mantenimiento
-
-### Backups Automáticos
-
-```bash
-# Añadir a crontab
-0 3 * * * /path/to/asterisk/scripts/backup-callcenter.sh
-```
-
-### Limpieza RGPD
-
-```bash
-# Ejecutar diariamente
-0 3 * * * /path/to/asterisk/scripts/cleanup-recordings.sh
-```
-
-## 📖 Documentación Adicional
-
-- [Configuración Detallada](docs/configuracion.md)
-- [Manual de Agentes](docs/manual-agentes.md)
-- [Troubleshooting](docs/troubleshooting.md)
+Ver [Configuración Avanzada](docs/configuracion.md) para más detalles.
 
 ## 🤝 Soporte
 
-Para soporte, contactar a través de [issues](https://github.com/tuusuario/escala365-communications/issues).
+- [Issues](https://github.com/tuusuario/escala365-communications/issues)
+- [Documentación Completa](docs/)
 
 ## 📜 Licencia
 

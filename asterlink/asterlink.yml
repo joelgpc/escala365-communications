@@ -1,0 +1,12 @@
+server:
+  addr: 0.0.0.0:8010 # Puerto WebSocket
+
+asterisk:
+  addr: 127.0.0.1:5038
+  username: asterlink
+  secret: ConectorSecreto123
+
+crm:
+  url: ${CRM_DOMAIN} # TU DOMINIO DE SUITECRM EN COOLIFY
+  key: "" # Se generará en SuiteCRM después
+  id: ""  # Se generará en SuiteCRM después

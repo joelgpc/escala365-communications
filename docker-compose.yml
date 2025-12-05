@@ -1,23 +1,11 @@
 version: '3.8'
 
-networks:
-  callcenter:
-    driver: bridge
-
-volumes:
-  mariadb_data:
-  suitecrm_data:
-  asterisk_config:
-  asterisk_recordings:
-  asterisk_sounds:
-
 services:
+  # 1. Base de Datos
   mariadb:
-    image: mariadb:10.11
-    container_name: callcenter_db
+    image: mariadb:10.6
+    container_name: crm_db
     restart: always
-    networks:
-      - callcenter
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: suitecrm
@@ -28,18 +16,18 @@ services:
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
-      timeout: 5s
       retries: 5
 
+  # 2. SuiteCRM (Versión compatible ARM)
   suitecrm:
     image: bitnami/suitecrm:8
-    container_name: callcenter_crm
+    container_name: crm_app
     restart: always
-    networks:
-      - callcenter
+    depends_on:
+      mariadb:
+        condition: service_healthy
     ports:
-      - "8080:8080"
-      - "8443:8443"
+      - "8080:8080" # Coolify usará este puerto para el dominio
     environment:
       - SUITECRM_DATABASE_HOST=mariadb
       - SUITECRM_DATABASE_PORT_NUMBER=3306
@@ -48,45 +36,38 @@ services:
       - SUITECRM_DATABASE_NAME=suitecrm
       - SUITECRM_USERNAME=admin
       - SUITECRM_PASSWORD=${ADMIN_PASSWORD}
-      - SUITECRM_EMAIL=${ADMIN_EMAIL}
-      - SUITECRM_HOST=${SUITECRM_PUBLIC_URL}
-      - SUITECRM_VALIDATE_USER_IP=no
+      - SUITECRM_HOST=${CRM_DOMAIN}
+      - SUITECRM_SKIP_BOOTSTRAP=no
     volumes:
       - suitecrm_data:/bitnami/suitecrm
-    depends_on:
-      mariadb:
-        condition: service_healthy
 
+  # 3. Asterisk PBX (Modo Host para VoIP real)
   asterisk:
     image: mlan/asterisk:latest
-    container_name: callcenter_asterisk
+    container_name: pbx_engine
     restart: always
-    # CRÍTICO: network_mode host para evitar problemas NAT
     network_mode: host
     cap_add:
       - NET_ADMIN
       - SYS_NICE
     environment:
       - SYSLOG_LEVEL=4
-      - TZ=Europe/Madrid
     volumes:
       - ./asterisk/config:/etc/asterisk:ro
-      - asterisk_recordings:/var/spool/asterisk/monitor
-      - asterisk_sounds:/var/lib/asterisk/sounds
-      - /etc/letsencrypt:/etc/asterisk/keys:ro
 
+  # 4. AsterLink (El conector - Compilado al vuelo para ARM)
   asterlink:
     build:
-      context: ./asterlink
+      context: https://github.com/serfreeman1337/asterlink.git
       dockerfile: Dockerfile
-    container_name: callcenter_connector
+    container_name: voip_connector
     restart: always
-    # También usa host para conectar con Asterisk AMI en localhost
-    network_mode: host
+    network_mode: host # Necesario para hablar con Asterisk en localhost
     volumes:
-      - ./asterlink/asterlink.conf:/app/config.yml:ro
+      - ./asterlink/asterlink.yml:/app/config.yml:ro
     depends_on:
       - asterisk
-      - suitecrm
-    environment:
-      - TZ=Europe/Madrid
+
+volumes:
+  mariadb_data:
+  suitecrm_data:
