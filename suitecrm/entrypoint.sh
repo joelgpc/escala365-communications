@@ -25,16 +25,16 @@ if [ "$INSTALLED" = false ]; then
     git clone --depth 1 --branch v8.7.1 https://github.com/salesagility/SuiteCRM-Core.git . || \
         git clone --depth 1 https://github.com/salesagility/SuiteCRM-Core.git .
     
-    # Eliminar .git
+    # Eliminar .git por seguridad
     rm -rf .git
     
-    echo ">>> Ejecutando Composer Install..."
+    echo ">>> Ejecutando Composer Install (esto tarda varios minutos)..."
     export APP_ENV=prod
     export COMPOSER_ALLOW_SUPERUSER=1
     
     composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs || true
     
-    # Crear estructura de directorios
+    # Crear estructura de directorios necesaria
     echo ">>> Creando estructura de directorios..."
     mkdir -p cache logs
     mkdir -p public/legacy/cache/images
@@ -45,35 +45,7 @@ if [ "$INSTALLED" = false ]; then
     echo ">>> ✓ Instalación completada."
 fi
 
-# CONFIGURAR APACHE VHOST (CRÍTICO PARA CSS)
-echo ">>> Configurando Apache VHost..."
-cat > /etc/apache2/sites-available/000-default.conf << 'APACHE_CONF'
-<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/html/public
-    
-    <Directory /var/www/html/public>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    # Permitir acceso a legacy
-    <Directory /var/www/html/public/legacy>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-APACHE_CONF
-
-# Habilitar mod_rewrite
-a2enmod rewrite > /dev/null 2>&1 || true
-
-# Asegurar permisos
+# Asegurar permisos (CRÍTICO para SuiteCRM)
 echo ">>> Ajustando permisos..."
 chown -R www-data:www-data /var/www/html
 find /var/www/html -type d -exec chmod 755 {} \; 2>/dev/null || true
