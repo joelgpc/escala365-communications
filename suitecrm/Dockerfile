@@ -13,27 +13,42 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libicu-dev \
     libldap2-dev \
+    libxml2-dev \
     mariadb-client \
+    curl \
+    gnupg \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Instalar extensiones PHP (Build Time)
-# Incluimos LDAP que es requerido por SuiteCRM 8
+# 2. Instalar Node.js (necesario para build de frontend)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3. Instalar extensiones PHP (Build Time)
+# Incluimos LDAP y SOAP que son requeridos por SuiteCRM 8
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure ldap \
-    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd bcmath intl ldap
+    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd bcmath intl ldap soap
 
-# 3. Instalar Composer
+# 4. Configurar PHP para SuiteCRM
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/suitecrm.ini \
+    && echo "upload_max_filesize = 20M" >> /usr/local/etc/php/conf.d/suitecrm.ini \
+    && echo "post_max_size = 25M" >> /usr/local/etc/php/conf.d/suitecrm.ini \
+    && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/suitecrm.ini \
+    && echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/suitecrm.ini
+
+# 5. Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-# 4. Activar Mod Rewrite
+# 6. Activar Mod Rewrite
 RUN a2enmod rewrite
 
-# 5. Configurar Apache para servir desde /var/www/html/public (SuiteCRM 8 requirement)
+# 7. Configurar Apache para servir desde /var/www/html/public (SuiteCRM 8 requirement)
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
-# 6. Configuración de seguridad para Apache (denegar acceso a .git, .env, etc.)
+# 8. Configuración de seguridad para Apache
 RUN echo '<Directory /var/www/html/public>\n\
     Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
@@ -47,9 +62,12 @@ RUN echo '<Directory /var/www/html/public>\n\
     </DirectoryMatch>' > /etc/apache2/conf-available/security-custom.conf \
     && a2enconf security-custom
 
-# 7. Copiar el Entrypoint al interior de la imagen
+# 9. Establecer APP_ENV para producción (evita cargar bundles de desarrollo)
+ENV APP_ENV=prod
+
+# 10. Copiar el Entrypoint al interior de la imagen
 COPY suitecrm/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 8. Definir el entrypoint
+# 11. Definir el entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
