@@ -44,9 +44,9 @@ services:
       timeout: 10s
       retries: 3
 
-  # 3. Asterisk PBX
+  # 3. Asterisk PBX (Multi-arch ARM64 compatible)
   asterisk:
-    image: mlan/asterisk:latest
+    image: andrius/asterisk:22
     container_name: pbx_engine
     restart: always
     network_mode: host
