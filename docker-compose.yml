@@ -26,10 +26,11 @@ services:
       mariadb:
         condition: service_healthy
     volumes:
-      # IMPORTANTE: Mapeamos el archivo explícitamente
-      - ./suitecrm/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
+      # CAMBIO AQUI: Usamos el nuevo nombre entrypoint.sh
+      - ./suitecrm/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
       - suitecrm_data:/var/www/html
-    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    # CAMBIO AQUI: Apuntamos al nuevo nombre
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
       - SUITECRM_DATABASE_HOST=mariadb
