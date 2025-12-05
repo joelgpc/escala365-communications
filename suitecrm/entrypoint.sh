@@ -6,61 +6,64 @@ echo "--- INICIO ENTRYPOINT SUITECRM (Docker Build) ---"
 # Configurar git para evitar problemas de ownership
 git config --global --add safe.directory /var/www/html
 
+# SUITECRM 8 RELEASE - Usamos release pre-construida en lugar de compilar
+SUITECRM_VERSION="8.7.1"
+SUITECRM_URL="https://suitecrm.com/download/147/suite87/564706/suitecrm-8-7-1.zip"
+
 # Verificar si SuiteCRM está correctamente instalado
-# Chequeamos public/index.php Y vendor/autoload.php Y dist folder
 INSTALLED=false
-if [ -f "/var/www/html/public/index.php" ] && [ -f "/var/www/html/vendor/autoload.php" ] && [ -d "/var/www/html/public/dist" ]; then
+if [ -f "/var/www/html/public/index.php" ] && [ -f "/var/www/html/vendor/autoload.php" ] && [ -d "/var/www/html/public/dist/suite8" ]; then
     INSTALLED=true
 fi
 
 if [ "$INSTALLED" = false ]; then
-    echo ">>> Instalación incompleta o ausente. Limpiando y reinstalando SuiteCRM 8..."
+    echo ">>> Instalación incompleta o ausente. Descargando SuiteCRM ${SUITECRM_VERSION} (release pre-construida)..."
     
     # Limpiamos carpeta completamente
     rm -rf /var/www/html/* 2>/dev/null || true
     rm -rf /var/www/html/.[!.]* 2>/dev/null || true
 
-    # Clonamos SuiteCRM
-    echo ">>> Clonando repositorio SuiteCRM-Core..."
-    git clone https://github.com/salesagility/SuiteCRM-Core.git /var/www/html --depth 1
-    
-    # Eliminar carpeta .git para seguridad
-    rm -rf /var/www/html/.git
-    
     cd /var/www/html
     
-    # Configurar APP_ENV antes de composer
-    export APP_ENV=prod
-    
-    echo ">>> Ejecutando composer install (esto puede tardar varios minutos)..."
-    # Usar --no-scripts para evitar errores de cache:clear
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs || {
-        echo ">>> ERROR: Composer install falló."
-        exit 1
+    # Descargar release pre-construida
+    echo ">>> Descargando desde ${SUITECRM_URL}..."
+    curl -L -o suitecrm.zip "${SUITECRM_URL}" || {
+        echo ">>> Error descargando, intentando desde GitHub releases..."
+        curl -L -o suitecrm.zip "https://github.com/salesagility/SuiteCRM-Core/releases/download/v${SUITECRM_VERSION}/SuiteCRM-${SUITECRM_VERSION}.zip"
     }
     
-    echo ">>> Instalando dependencias de frontend..."
-    # Instalar dependencias npm
-    if [ -f "package.json" ]; then
-        npm install --legacy-peer-deps 2>/dev/null || npm install 2>/dev/null || echo ">>> Advertencia: npm install tuvo algunos problemas"
+    echo ">>> Extrayendo archivos..."
+    unzip -q suitecrm.zip
+    rm suitecrm.zip
+    
+    # Mover contenido si está en subcarpeta
+    if [ -d "SuiteCRM-${SUITECRM_VERSION}" ]; then
+        mv SuiteCRM-${SUITECRM_VERSION}/* .
+        mv SuiteCRM-${SUITECRM_VERSION}/.[!.]* . 2>/dev/null || true
+        rmdir SuiteCRM-${SUITECRM_VERSION}
     fi
     
-    echo ">>> Construyendo assets del frontend..."
-    # Crear directorio dist si no existe
-    mkdir -p /var/www/html/public/dist
+    # Si hay subcarpeta suitecrm-8.x.x
+    for dir in suitecrm-*; do
+        if [ -d "$dir" ]; then
+            mv "$dir"/* .
+            mv "$dir"/.[!.]* . 2>/dev/null || true
+            rmdir "$dir"
+        fi
+    done
     
-    # Intentar build de frontend
-    if [ -f "package.json" ]; then
-        npm run build-dev 2>/dev/null || npm run build 2>/dev/null || {
-            echo ">>> Advertencia: npm build falló, creando assets mínimos..."
-            # Crear archivos vacíos necesarios
-            mkdir -p /var/www/html/public/dist/themes/suite8/css
-            mkdir -p /var/www/html/public/dist/themes/suite8/js
-            mkdir -p /var/www/html/public/dist/themes/suite8/images
-            touch /var/www/html/public/dist/themes/suite8/css/styles.css
-            touch /var/www/html/public/dist/themes/suite8/js/app.js
-        }
+    # Verificar que tenemos los archivos correctos
+    if [ ! -f "composer.json" ]; then
+        echo ">>> ERROR: No se encontró composer.json después de extraer"
+        ls -la
+        exit 1
     fi
+    
+    echo ">>> Ejecutando composer install..."
+    export APP_ENV=prod
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs || {
+        echo ">>> Advertencia: composer install tuvo problemas, continuando..."
+    }
     
     # Crear directorios de cache necesarios
     echo ">>> Creando directorios de cache..."
@@ -94,9 +97,9 @@ chmod -R 775 /var/www/html/public/legacy/cache 2>/dev/null || true
 chmod -R 775 /var/www/html/logs 2>/dev/null || true
 chmod -R 775 /var/www/html/public/legacy/upload 2>/dev/null || true
 
-# Crear .htaccess de seguridad si no existe
+# Crear .htaccess si no existe
 if [ ! -f "/var/www/html/public/.htaccess" ]; then
-    echo ">>> Creando .htaccess de seguridad en public/..."
+    echo ">>> Creando .htaccess..."
     cat > /var/www/html/public/.htaccess << 'EOF'
 <FilesMatch "^\.">
     Require all denied
