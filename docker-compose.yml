@@ -11,8 +11,8 @@ services:
       - SYS_NICE
     environment:
       - SYSLOG_LEVEL=4
+    # NO MONTAMOS VOLUMEN DE CONFIGURACIÓN - USA DEFAULTS INTERNOS
     volumes:
-      - ./asterisk/etc:/etc/asterisk:ro
       - asterisk_data:/var/lib/asterisk
       - asterisk_logs:/var/log/asterisk
 
