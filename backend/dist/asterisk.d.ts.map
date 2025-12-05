@@ -1,1 +1,0 @@
-{"version":3,"file":"asterisk.d.ts","sourceRoot":"","sources":["../src/asterisk.ts"],"names":[],"mappings":"AAEA,qBAAa,WAAW;IACpB,OAAO,CAAC,GAAG,CAAM;IACjB,OAAO,CAAC,SAAS,CAAkB;gBAEvB,MAAM,EAAE,GAAG;IAIjB,OAAO,IAAI,OAAO,CAAC,IAAI,CAAC;IAgB9B,OAAO,CAAC,kBAAkB;IAUpB,aAAa,IAAI,OAAO,CAAC,GAAG,EAAE,CAAC;IAWrC,WAAW,IAAI,OAAO;CAGzB"}

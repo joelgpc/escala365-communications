@@ -1,85 +1,92 @@
-version: "3.9"
+version: '3.8'
+
+networks:
+  callcenter:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  suitecrm_data:
+  asterisk_config:
+  asterisk_recordings:
+  asterisk_sounds:
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres
+  mariadb:
+    image: mariadb:10.11
+    container_name: callcenter_db
+    restart: always
+    networks:
+      - callcenter
     environment:
-      POSTGRES_USER: escala365
-      POSTGRES_PASSWORD: 'P0stgr3s_Sup3r_S3cur3_Key_2025!'
-      POSTGRES_DB: escala365_db
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: suitecrm
+      MYSQL_USER: suitecrm
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_data_v4:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U escala365 -d escala365_db"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
-    networks:
-      - escala365-net
 
-  redis:
-    image: redis:7-alpine
-    container_name: escala365-redis
+  suitecrm:
+    image: bitnami/suitecrm:8
+    container_name: callcenter_crm
+    restart: always
     networks:
-      - escala365-net
+      - callcenter
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - SUITECRM_DATABASE_HOST=mariadb
+      - SUITECRM_DATABASE_PORT_NUMBER=3306
+      - SUITECRM_DATABASE_USER=suitecrm
+      - SUITECRM_DATABASE_PASSWORD=${DB_PASSWORD}
+      - SUITECRM_DATABASE_NAME=suitecrm
+      - SUITECRM_USERNAME=admin
+      - SUITECRM_PASSWORD=${ADMIN_PASSWORD}
+      - SUITECRM_EMAIL=${ADMIN_EMAIL}
+      - SUITECRM_HOST=${SUITECRM_PUBLIC_URL}
+      - SUITECRM_VALIDATE_USER_IP=no
+    volumes:
+      - suitecrm_data:/bitnami/suitecrm
+    depends_on:
+      mariadb:
+        condition: service_healthy
 
   asterisk:
-    build:
-      context: ./asterisk
-      dockerfile: Dockerfile
-    container_name: escala365-asterisk
+    image: mlan/asterisk:latest
+    container_name: callcenter_asterisk
+    restart: always
+    # CRÍTICO: network_mode host para evitar problemas NAT
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
     environment:
-      AMI_PASSWORD: 'Ast3r1sk_Am1_S3cr3t_Conn!'
+      - SYSLOG_LEVEL=4
+      - TZ=Europe/Madrid
     volumes:
-      - asterisk_data:/var/lib/asterisk
-    ports:
-      - "5060:5060/udp"
-      - "5038:5038"
-      - "8088:8088"
-    networks:
-      - escala365-net
+      - ./asterisk/config:/etc/asterisk:ro
+      - asterisk_recordings:/var/spool/asterisk/monitor
+      - asterisk_sounds:/var/lib/asterisk/sounds
+      - /etc/letsencrypt:/etc/asterisk/keys:ro
 
-  backend:
+  asterlink:
     build:
-      context: ./backend
+      context: ./asterlink
       dockerfile: Dockerfile
-    container_name: escala365-backend
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://escala365:P0stgr3s_Sup3r_S3cur3_Key_2025!@postgres:5432/escala365_db
-      REDIS_URL: redis://escala365-redis:6379
-      ASTERISK_HOST: escala365-asterisk
-      ASTERISK_PORT: 5038
-      ASTERISK_USER: admin
-      ASTERISK_PASSWORD: 'Ast3r1sk_Am1_S3cr3t_Conn!'
-      JWT_SECRET: 'jwt_5up3r_l0ng_r@nd0m_s3cr3t_k3y_f0r_t0k3ns'
-      PORT: 3000
+    container_name: callcenter_connector
+    restart: always
+    # También usa host para conectar con Asterisk AMI en localhost
+    network_mode: host
+    volumes:
+      - ./asterlink/asterlink.conf:/app/config.yml:ro
     depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - escala365-net
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: escala365-frontend
+      - asterisk
+      - suitecrm
     environment:
-      # Ahora la API es relativa porque Nginx (el gateway) lo gestiona
-      REACT_APP_API_URL: /api
-    depends_on:
-      - backend
-    networks:
-      - escala365-net
-
-volumes:
-  postgres_data_v4:
-  asterisk_data:
-
-networks:
-  escala365-net:
-    driver: bridge
+      - TZ=Europe/Madrid

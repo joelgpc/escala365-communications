@@ -1,27 +1,40 @@
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
-
-# Testing
-/coverage
-
-# Production
-/build
-/dist
-
-# Environment
+# Environment variables
 .env
-.env.local
-.env.*.local
+
+# Docker volumes
+volumes/
+
+# Logs
+*.log
+logs/
+
+# Asterisk recordings
+recordings/
+*.wav
+*.mp3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Backups
+backups/
+*.sql
+*.tar.gz
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+temp/
+tmp/
