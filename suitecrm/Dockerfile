@@ -1,6 +1,7 @@
 FROM php:8.1-apache
 
-# 1. Instalar dependencias del sistema
+# 1. Instalar dependencias
+# Nota: libc-client-dev es el nombre correcto para IMAP en Debian moderno
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -19,10 +20,10 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Instalar extensiones PHP
+# 2. Configurar extensiones PHP
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure ldap \
-    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd bcmath intl ldap soap
+    && docker-php-ext-install -j$(nproc) pdo_mysql mysqli zip gd bcmath soap intl ldap
 
 # 3. Configurar PHP para SuiteCRM
 RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/suitecrm.ini \
@@ -31,21 +32,23 @@ RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/suitecrm.ini \
     && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/suitecrm.ini \
     && echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/suitecrm.ini
 
-# 4. Instalar Composer
+# 4. Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-# 5. Configurar Apache - Habilitar módulos
+# 5. Configurar Apache
 RUN a2enmod rewrite headers expires
 
-# 6. FIX VITAL: Inyectar nuestra configuración de VHOST con AllowOverride All
+# 6. Inyectar VHOST
 COPY suitecrm/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# 7. Establecer APP_ENV para producción
-ENV APP_ENV=prod
-
-# 8. Copiar el Entrypoint
+# 7. Entrypoint
 COPY suitecrm/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 9. Definir el entrypoint
+# 8. WORKDIR
+WORKDIR /var/www/html
+
+# 9. APP_ENV
+ENV APP_ENV=prod
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
