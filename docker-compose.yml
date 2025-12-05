@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   freepbx:
-    image: tiredofit/freepbx:16-latest
+    image: tiredofit/freepbx:latest
     container_name: freepbx_app
     restart: always
     network_mode: host
@@ -16,7 +16,7 @@ services:
       - RTP_FINISH=20000
       - HTTP_PORT=8080
       - HTTPS_PORT=8443
-      - ADMIN_PASSWORD=admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - ENABLE_FLASH_OPERATOR_PANEL=FALSE
     volumes:
       - freepbx_data:/var/lib/asterisk
