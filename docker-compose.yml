@@ -1,63 +1,64 @@
 version: '3.8'
 
 services:
-  # 1. Base de Datos
   mariadb:
     image: mariadb:10.6
-    container_name: crm_db
+    container_name: mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       MYSQL_DATABASE: suitecrm
-      MYSQL_USER: suitecrm
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: suitecrm_user
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
+      timeout: 5s
       retries: 5
 
-  # 2. SuiteCRM (Construido desde PHP + Apache)
   suitecrm:
     image: php:8.1-apache
-    container_name: crm_app
+    container_name: suitecrm
     restart: always
     depends_on:
       mariadb:
         condition: service_healthy
+    volumes:
+      # IMPORTANTE: Mapeamos el archivo explícitamente
+      - ./suitecrm/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
+      - suitecrm_data:/var/www/html
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - SUITECRM_DATABASE_HOST=mariadb
+      - SUITECRM_DATABASE_USER=suitecrm_user
+      - SUITECRM_DATABASE_PASSWORD=${DB_PASSWORD}
+      - SUITECRM_DATABASE_NAME=suitecrm
     ports:
       - "8080:80"
-    environment:
-      - DB_HOST=mariadb
-      - DB_NAME=suitecrm
-      - DB_USER=suitecrm
-      - DB_PASS=${DB_PASSWORD}
-    volumes:
-      - suitecrm_data:/var/www/html
-      - ./suitecrm/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
-    entrypoint: /usr/local/bin/docker-entrypoint.sh
-    command: apache2-foreground
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # 3. Asterisk PBX (Multi-arch ARM64 compatible)
   asterisk:
     image: andrius/asterisk:22
-    container_name: pbx_engine
+    container_name: asterisk
     restart: always
     network_mode: host
     cap_add:
+      - SYS_PTRACE
       - NET_ADMIN
-      - SYS_NICE
-    environment:
-      - SYSLOG_LEVEL=4
+      - NET_RAW
+      - NET_BIND_SERVICE
     volumes:
-      - ./asterisk/config:/etc/asterisk:ro
+      - asterisk_config:/etc/asterisk
+      - asterisk_spool:/var/spool/asterisk
+      - asterisk_sounds:/var/lib/asterisk/sounds
+    environment:
+      - AMI_PASSWORD=${AMI_PASSWORD}
 
 volumes:
   mariadb_data:
   suitecrm_data:
+  asterisk_config:
+  asterisk_spool:
+  asterisk_sounds:

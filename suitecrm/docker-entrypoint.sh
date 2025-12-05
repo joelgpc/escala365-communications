@@ -1,52 +1,77 @@
 #!/bin/bash
 set -e
 
-echo "=== SuiteCRM Docker Entrypoint ==="
+echo "--- INICIO ENTRYPOINT SUITECRM (ARM64 Compatible) ---"
 
-# Instalar paquetes básicos solo la primera vez
-if [ ! -f /var/www/html/.packages_installed ]; then
-    echo "Instalando dependencias del sistema..."
-    apt-get update -qq
-    apt-get install -y --no-install-recommends \
-        git \
-        unzip \
-        curl \
-        libzip-dev \
-        libpng-dev \
-        libjpeg-dev \
-        libfreetype6-dev \
-        default-mysql-client > /dev/null 2>&1
-    
-    docker-php-ext-install zip gd mysqli pdo pdo_mysql opcache > /dev/null 2>&1
-    a2enmod rewrite
-    
-    touch /var/www/html/.packages_installed
-    echo "✓ Dependencias instaladas"
+# 1. Instalar dependencias del sistema necesarias para SuiteCRM
+#    (Se hace en runtime para mantener la imagen base ligera y compatible)
+echo ">>> Actualizando apt y paquetes..."
+apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libimap-dev \
+    libkerberos-dev \
+    libkrb5-dev \
+    libssl-dev \
+    zlib1g-dev \
+    mariadb-client \
+    --no-install-recommends
+
+# 2. Configurar e instalar extensiones de PHP
+echo ">>> Instalando extensiones PHP..."
+docker-php-ext-configure gd --with-freetype --with-jpeg
+docker-php-ext-configure imap --with-kerberos --with-imap-ssl
+docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    mysqli \
+    zip \
+    gd \
+    imap \
+    bcmath \
+    soap \
+    intl
+
+# 3. Instalar Composer (gestor de paquetes PHP)
+if [ ! -f "/usr/local/bin/composer" ]; then
+    echo ">>> Instalando Composer..."
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 fi
 
-# Si no existe SuiteCRM, descargarlo
-if [ ! -f /var/www/html/index.php ]; then
+# 4. Configurar Apache (mod_rewrite es vital para SuiteCRM)
+echo ">>> Activando mod_rewrite..."
+a2enmod rewrite
+
+# 5. Descargar SuiteCRM si la carpeta está vacía
+if [ ! -f "/var/www/html/index.php" ]; then
+    echo ">>> No se detecta instalación. Descargando SuiteCRM 8..."
+    # Borramos html por si acaso está creado por defecto
+    rm -rf /var/www/html/*
+    
+    # Clonamos la versión 8 (Core)
+    git clone https://github.com/salesagility/SuiteCRM-Core.git /var/www/html --depth 1
+    
+    echo ">>> Ejecutando composer install (esto puede tardar unos minutos)..."
     cd /var/www/html
-    rm -rf ./*
+    # Instalar dependencias ignorando warnings de plataforma por si acaso
+    composer install --no-dev --optimize-autoloader
     
-    echo "Descargando SuiteCRM desde GitHub..."
-    git clone --depth 1 https://github.com/salesagility/SuiteCRM-Core.git . > /dev/null 2>&1
-    
-    echo "Instalando Composer..."
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
-    
-    echo "Instalando dependencias PHP (esto puede tardar 5-10 min)..."
-    composer install --no-dev --optimize-autoloader --no-interaction > /dev/null 2>&1
-    
+    # Ajustar permisos iniciales
     chown -R www-data:www-data /var/www/html
     chmod -R 755 /var/www/html
     
-    echo "✓ SuiteCRM descargado e inicializado"
+    echo ">>> Descarga completada."
+else
+    echo ">>> SuiteCRM ya instalado. Saltando descarga."
 fi
 
-# Asegurar permisos correctos siempre
+# 6. Asegurar permisos finales
+echo ">>> Ajustando permisos..."
 chown -R www-data:www-data /var/www/html
-chmod -R 755 /var/www/html
 
-echo "=== Iniciando Apache ==="
+echo "--- ENTRYPOINT FINALIZADO. ARRANCANDO APACHE ---"
 exec apache2-foreground
