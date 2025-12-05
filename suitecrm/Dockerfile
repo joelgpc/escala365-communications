@@ -1,6 +1,8 @@
 FROM php:8.1-apache
 
-# 1. Instalar dependencias del sistema (Build Time - Se hace una sola vez)
+# 1. Instalar dependencias del sistema (Build Time)
+# Nota: libimap-dev se llama libc-client-dev en Debian
+# Nota: libkerberos-dev se llama libkrb5-dev en Debian
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -9,11 +11,11 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
-    libimap-dev \
-    libkerberos-dev \
+    libc-client-dev \
     libkrb5-dev \
     libssl-dev \
     zlib1g-dev \
+    libicu-dev \
     mariadb-client \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
@@ -30,7 +32,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 RUN a2enmod rewrite
 
 # 5. Copiar el Entrypoint al interior de la imagen
-# (Esto soluciona tu error: el archivo YA estará dentro, no es un volumen externo)
 COPY suitecrm/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
