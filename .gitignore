@@ -38,3 +38,10 @@ Thumbs.db
 # Temporary files
 temp/
 tmp/
+
+# SuiteCRM data (sensitive)
+suitecrm_data/
+suitecrm/vendor/
+
+# Asterisk sensitive config
+asterisk/config/manager.conf

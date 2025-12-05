@@ -18,9 +18,9 @@ services:
       interval: 10s
       retries: 5
 
-  # 2. SuiteCRM (Usando imagen genérica PHP + Apache)
+  # 2. SuiteCRM (Construido desde PHP + Apache)
   suitecrm:
-    image: linuxserver/suitecrm:latest
+    image: php:8.1-apache
     container_name: crm_app
     restart: always
     depends_on:
@@ -29,18 +29,15 @@ services:
     ports:
       - "8080:80"
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Madrid
       - DB_HOST=mariadb
       - DB_NAME=suitecrm
       - DB_USER=suitecrm
       - DB_PASS=${DB_PASSWORD}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_PASS=${ADMIN_PASSWORD}
     volumes:
-      - suitecrm_data:/config
       - suitecrm_data:/var/www/html
+      - ./suitecrm/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
+    entrypoint: /usr/local/bin/docker-entrypoint.sh
+    command: apache2-foreground
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
