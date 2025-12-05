@@ -29,8 +29,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 # 4. Activar Mod Rewrite
 RUN a2enmod rewrite
 
-# 5. Configuración de seguridad para Apache (denegar acceso a .git, .env, etc.)
-RUN echo '<Directory /var/www/html>\n\
+# 5. Configurar Apache para servir desde /var/www/html/public (SuiteCRM 8 requirement)
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+# 6. Configuración de seguridad para Apache (denegar acceso a .git, .env, etc.)
+RUN echo '<Directory /var/www/html/public>\n\
     Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
@@ -43,9 +47,9 @@ RUN echo '<Directory /var/www/html>\n\
     </DirectoryMatch>' > /etc/apache2/conf-available/security-custom.conf \
     && a2enconf security-custom
 
-# 6. Copiar el Entrypoint al interior de la imagen
+# 7. Copiar el Entrypoint al interior de la imagen
 COPY suitecrm/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 7. Definir el entrypoint
+# 8. Definir el entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
