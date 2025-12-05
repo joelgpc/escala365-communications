@@ -18,28 +18,34 @@ services:
       interval: 10s
       retries: 5
 
-  # 2. SuiteCRM
+  # 2. SuiteCRM (Usando imagen genérica PHP + Apache)
   suitecrm:
-    image: bitnami/suitecrm:8
+    image: linuxserver/suitecrm:latest
     container_name: crm_app
     restart: always
     depends_on:
       mariadb:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8080:80"
     environment:
-      - SUITECRM_DATABASE_HOST=mariadb
-      - SUITECRM_DATABASE_PORT_NUMBER=3306
-      - SUITECRM_DATABASE_USER=suitecrm
-      - SUITECRM_DATABASE_PASSWORD=${DB_PASSWORD}
-      - SUITECRM_DATABASE_NAME=suitecrm
-      - SUITECRM_USERNAME=admin
-      - SUITECRM_PASSWORD=${ADMIN_PASSWORD}
-      - SUITECRM_EMAIL=${ADMIN_EMAIL}
-      - SUITECRM_HOST=${SUITECRM_PUBLIC_URL}
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+      - DB_HOST=mariadb
+      - DB_NAME=suitecrm
+      - DB_USER=suitecrm
+      - DB_PASS=${DB_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASS=${ADMIN_PASSWORD}
     volumes:
-      - suitecrm_data:/bitnami/suitecrm
+      - suitecrm_data:/config
+      - suitecrm_data:/var/www/html
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # 3. Asterisk PBX
   asterisk:
