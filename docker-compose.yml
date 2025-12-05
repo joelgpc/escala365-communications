@@ -37,8 +37,8 @@ services:
       - SUITECRM_DATABASE_USER=suitecrm_user
       - SUITECRM_DATABASE_PASSWORD=${DB_PASSWORD}
       - SUITECRM_DATABASE_NAME=suitecrm
-    ports:
-      - "8080:80"
+    expose:
+      - "80"
 
   asterisk:
     image: andrius/asterisk:22
