@@ -1,145 +1,195 @@
-# Guía de Despliegue Rápido - VoIP Integration
+# Despliegue por Fases - Guía Simplificada
 
-## 🎯 Objetivo
+## 🎯 Estrategia
 
-Hacer funcionar **SuiteCRM + Asterisk + AsterLink** para tener:
+**Fase 1**: SuiteCRM + Asterisk funcionando (llamadas básicas)  
+**Fase 2**: Integración VoIP (pop-up en CRM)
 
-- Pop-up automático cuando llega una llamada
-- Click-to-call desde el CRM
+## 📋 Fase 1: Core Stack
 
-## 📋 Pre-requisitos
+### Paso 1: Deploy en Coolify
 
-- Coolify instalado en Oracle Cloud ARM
-- Dominio configurado
-- Puertos abiertos: 5060 UDP, 8010 TCP, 8080 TCP
+1. **Eliminar servicio anterior** si existe
+2. **New Service** → **Docker Compose**
+3. Copiar contenido de `docker-compose.yml`
 
-## 🚀 Pasos de Despliegue
+### Paso 2: Variables de Entorno
 
-### 1. En Coolify - Crear Servicio
+```
+DB_ROOT_PASSWORD=dbtest2025
+DB_PASSWORD=P0stgr3s_Sup3r_S3cur3_Key_2025!
+ADMIN_PASSWORD=Jesucristo93.
+ADMIN_EMAIL=admin@escala365.com
+SUITECRM_PUBLIC_URL=https://ggk8gok8o04swgk8480kkwo4.apps.elanchurch.org
+```
 
-1. **Projects** → **New Service** → **Docker Compose**
-2. Pegar contenido de `docker-compose.yml`
-3. Configurar **Environment Variables**:
-   ```
-   DB_ROOT_PASSWORD=TuPasswordRoot
-   DB_PASSWORD=TuPasswordDB
-   ADMIN_PASSWORD=TuPasswordAdmin
-   CRM_DOMAIN=https://crm.tudominio.com
-   ```
+### Paso 3: Configurar Dominio
 
-### 2. Configurar Dominios en Coolify
+En Coolify:
 
-- **Puerto 8080**: `crm.tudominio.com` (SuiteCRM)
-- **Puerto 8010**: `ws.tudominio.com` (WebSocket AsterLink)
+- **Puerto 8080**: Asignar dominio para SuiteCRM
 
-### 3. Deploy
+### Paso 4: Deploy
 
-Click en **Deploy** y espera ~5 minutos a que SuiteCRM inicialice.
+Click **Deploy** y esperar 5-10 minutos.
 
-### 4. Configurar SuiteCRM
-
-#### 4.1 Instalar Módulo AsterLink
-
-1. Descargar: [AsterLink.zip](https://github.com/serfreeman1337/asterlink/raw/master/module/AsterLink.zip)
-2. SuiteCRM → **Admin** → **Module Loader**
-3. **Upload** y **Install**
-
-#### 4.2 Generar API Keys
-
-1. SuiteCRM → **Admin** → **OAuth2 Clients and Tokens**
-2. **Create New**:
-   - Name: `AsterLink`
-   - Copiar el **Client ID** y **Client Secret**
-
-#### 4.3 Actualizar AsterLink Config
-
-En tu servidor (SSH):
+**Verificar**:
 
 ```bash
-cd ~/crm-voip-stack
-nano asterlink/asterlink.yml
+# Ver logs
+docker logs crm_app
+docker logs pbx_engine
+
+# Estado de servicios
+docker ps
 ```
 
-Actualizar:
+### Paso 5: Acceder a SuiteCRM
 
-```yaml
-crm:
-  url: https://crm.tudominio.com
-  key: "CLIENT_SECRET_AQUI"
-  id: "CLIENT_ID_AQUI"
-```
+1. Abrir: `https://ggk8gok8o04swgk8480kkwo4.apps.elanchurch.org`
+2. Login:
+   - Username: `admin`
+   - Password: `Jesucristo93.`
 
-Reiniciar:
+### Paso 6: Probar Asterisk con Zoiper
+
+#### 6.1 Descargar Zoiper
+
+- [Windows/Mac/Linux](https://www.zoiper.com/en/voip-softphone/download/current)
+
+#### 6.2 Configurar Extensión 100
+
+**En Zoiper**:
+
+- Account name: `Agente 1`
+- Domain: `143.47.41.244:5060`
+- Username: `100`
+- Password: `100pass`
+- Transport: UDP
+
+#### 6.3 Verificar Registro
+
+En servidor Oracle:
 
 ```bash
-docker restart voip_connector
+docker exec pbx_engine asterisk -rx "pjsip show endpoints"
 ```
 
-#### 4.4 Configurar Usuario
+Debería mostrar:
 
-1. SuiteCRM → **Mi Perfil**
-2. Sección **AsterLink Configuration**:
-   - Extension: `100`
-   - WebSocket URL: `wss://ws.tudominio.com`
-3. **Guardar**
+```
+100    alaw,ulaw    Unavailable/Available    0
+```
 
-### 5. Probar con Softphone
+#### 6.4 Segunda Extensión (Opcional)
 
-#### 5.1 Configurar Zoiper
+En otro dispositivo/navegador:
 
-- **Domain**: IP_PUBLICA_ORACLE:5060
-- **Username**: 100
-- **Password**: 100
-- **Transport**: UDP
+- Domain: `143.47.41.244:5060`
+- Username: `101`
+- Password: `101pass`
 
-#### 5.2 Hacer Llamada de Prueba
+#### 6.5 Test de Llamada
 
-1. Registra Zoiper con extensión 100
-2. Desde otro teléfono, llama a la extensión 100
-3. **Resultado esperado**: Pop-up en SuiteCRM mostrando la llamada
+1. Desde ext 100, marcar: `101`
+2. Debería sonar en la otra extensión
+3. **Audio bidireccional OK** = ✅ Fase 1 completa
+
+## 📋 Fase 2: Integración VoIP (Después)
+
+### Opción A: Módulo Nativo SuiteCRM
+
+1. SuiteCRM → Admin → Module Loader
+2. Buscar módulo "Asterisk Integration" o "VoIP"
+3. Instalar y configurar
+
+### Opción B: AsterLink (Manual)
+
+Si el módulo nativo no funciona, instalar AsterLink:
+
+```bash
+# En servidor Oracle
+docker run -d \
+  --name voip_connector \
+  --network host \
+  -v $(pwd)/asterlink.yml:/app/config.yml:ro \
+  IMAGE_ASTERLINK
+```
+
+(Instrucciones detalladas después de completar Fase 1)
 
 ## 🔧 Troubleshooting
 
-### Pop-up no aparece
+### SuiteCRM no carga
 
 ```bash
-# Ver logs de AsterLink
-docker logs voip_connector
-
-# Verificar conexión AMI
-docker exec pbx_engine asterisk -rx "manager show connected"
+docker logs crm_app
+# Verificar healthcheck de MariaDB
+docker exec crm_db mysql -u root -p$DB_ROOT_PASSWORD -e "SHOW DATABASES;"
 ```
 
 ### Zoiper no registra
 
 ```bash
+# Ver logs de Asterisk
+docker logs pbx_engine
+
 # Ver endpoints
 docker exec pbx_engine asterisk -rx "pjsip show endpoints"
 
-# Ver logs
-docker logs pbx_engine
+# Verificar puerto 5060 UDP abierto
+sudo ufw status
 ```
 
-## 📊 Verificación de Estado
+### No hay audio en llamadas
 
 ```bash
-# Todos los contenedores corriendo
-docker ps
+# Verificar puertos RTP (10000-20000 UDP)
+sudo ufw allow 10000:20000/udp
 
-# SuiteCRM accesible
-curl https://crm.tudominio.com
-
-# WebSocket respondiendo
-curl -v https://ws.tudominio.com
+# Ver configuración NAT
+docker exec pbx_engine asterisk -rx "pjsip show transports"
 ```
 
-## ✅ Checklist de Despliegue
+## ✅ Checklist Fase 1
 
-- [ ] Variables de entorno configuradas
-- [ ] Dominios apuntando correctamente
-- [ ] Puertos abiertos en Oracle Cloud
 - [ ] SuiteCRM accesible vía web
-- [ ] Módulo AsterLink instalado
-- [ ] API keys generadas y configuradas
-- [ ] Extensión 100 registrada en Zoiper
-- [ ] Pop-up funcionando
+- [ ] Login admin funciona
+- [ ] Zoiper registra extensión 100
+- [ ] Zoiper registra extensión 101 (opcional)
+- [ ] Llamada 100 → 101 suena
+- [ ] Audio bidireccional OK
+
+**Una vez completa Fase 1, procedemos a Fase 2** 🚀
+
+## 📊 Puertos Requeridos (Oracle Cloud)
+
+### Security List / Firewall
+
+**TCP**:
+
+- 8080 (SuiteCRM - via Coolify)
+- 5038 (AMI - solo localhost, no abrir)
+
+**UDP**:
+
+- 5060 (SIP)
+- 10000-20000 (RTP - audio)
+
+### UFW en servidor
+
+```bash
+sudo ufw allow 5060/udp
+sudo ufw allow 10000:20000/udp
+sudo ufw allow 8080/tcp
+sudo ufw allow 443/tcp
+```
+
+## 📝 Próximos Pasos
+
+1. ✅ Deploy stack básico
+2. ✅ Acceder a SuiteCRM
+3. ✅ Probar llamadas con Zoiper
+4. ⏳ Instalar módulo VoIP en CRM
+5. ⏳ Configurar pop-up
+6. ⏳ Click-to-call
